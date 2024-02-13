@@ -22,14 +22,14 @@
  
 ## 홈화면
 <img src="pictures/home.png">
-ㄴ Now Users : 현재 채팅에 참여 중 이거나 채팅을 찾고있는 유저의 총 인원수
+ㄴ Now Users : 현재 채팅에 참여 중 이거나 채팅을 찾고있는 유저의 총 인원수 <br/> 
 ㄴ New Chat : 채팅할 방을 검색하기, 채팅중일시 끊고 다시 새 채팅방 검색
 
 ## 구동화면
 <img src="pictures/looking.png">
-ㄴ 대기풀에 등록되어 상대방을 찾고있는 화면
+ㄴ 대기풀에 등록되어 상대방을 찾고있는 화면 <br/> 
 <img src="pictures/chat.png">
-ㄴ 상대방을 찾아 1:1 매칭이 되어 채팅을 하고 있는 화면
+ㄴ 상대방을 찾아 1:1 매칭이 되어 채팅을 하고 있는 화면 <br/> 
 <img src="pictures/end.png">
 ㄴ 채팅을 종료시 해당유저 화면(좌), 상대방 화면(우)
 
