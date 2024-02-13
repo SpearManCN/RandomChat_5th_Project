@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Blind Chat</title>
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <style>
+        .chat{
+            height:500px;
+            width:500px;
+            overflow: auto;
+        }
+        li {
+            text-align: left;
+        }
+    </style>
+</head>
+<body style="background-color: beige">
+<div align="center" style="width:100%; height:120px;"></div>
+<div align="center">
+    <div style="width:600px; height:720px; border:3px; border-radius: 30px; background-color:  #EBEBEB">
+
+        <div align="center" style="width:100%; height:15px;"></div>
+<div align="center" style="font-family: 'Arial Black'; font-size: 50px;">Blind Chat</div>
+<div align="center" style="width:100%; height:10px;"></div>
+<span name="nowNumber" style="font-size: 20px; font-family: 'Arial Black'"></span>
+
+
+
+<div align="center">
+<div class="chat">
+    <ul id="messages"></ul>
+</div>
+    <form id="messageForm">
+    <input style="width:350px; height:25px;" type="text" id="messageInput" placeholder="Type a message..." />
+    <button style="width:50px; height:28px;" type="submit" >Send</button>
+</form>
+    <div style="height: 20px"></div>
+    <button name="connect" style="width:100px; height:20px;" th:onclick="connect()">New Chat</button>
+    <button name="send2" style="width:100px; height:20px;" th:onclick="confirmDisconnect()">Exit</button>
+</div>
+
+    </div>
+</div>
+
+<input type="hidden" th:value="${sessionId}" name="sessionId">
+<input type="hidden" name="nowTotUser">
+<input type="hidden" name="brokerName">
+<input type="hidden" name="memberName">
+<script>
+    var stompClient = null;
+    var sessionId = $("[name=sessionId]").val();
+    var brokerName = "";
+    var memberName = "";
+    function connect() {
+
+        if(confirm("Are you sure you want to start a new chat?")==false){return;}
+        disconnect();
+        $('#messages').empty();
+        var socket = new WebSocket('ws://' + window.location.host + '/chat');
+        stompClient = Stomp.over(socket);
+        stompClient.connect({}, function () {
+            stompClient.subscribe('/topic/public/'+sessionId, function (chatMessage) {
+                $("[name=brokerName]").val(JSON.parse(chatMessage.body).brokerName);
+                // $("[name=memberName]").val(JSON.parse(chatMessage.body).receiver);
+                showChatMessage(JSON.parse(chatMessage.body));
+            });
+            stompClient.send("/app/chat/sendMessage/"+sessionId, {}, JSON.stringify({sender:sessionId, content:"", type: 'JOIN' }));
+        });
+    }
+
+    function findBroker(){
+        return new Promise(
+            function(resolve, reject){
+                $.ajax({
+                    url:"/findRoomProc"
+                    ,success: function(tmp){
+                        $("[name=brokerName]").val(tmp);
+                        resolve(tmp);
+                    }
+                });
+            }
+        );
+    }
+
+    function confirmDisconnect(){
+        if(confirm("Are you sure you want to leave?")==false){return;}
+        disconnect();
+        $('#messages').empty();
+        $('#messages').append('<li>'  + 'Chat has ended.' + '</li>');
+    }
+
+    function updateUserNo() {
+        $.ajax({
+            url: '/updateUserNo',  // 서버에서 유저 목록을 반환하는 엔드포인트
+            success: function(no) {
+                $("[name=nowTotUser]").val( "현재 접속 인원 : "+no);
+                $("[name=nowNumber]").text( "Now Users : " +no);
+            }
+        });
+    }
+    setInterval(updateUserNo, 1000);
+    function disconnect() {
+        if (stompClient !== null) {
+            stompClient.disconnect();
+        }
+    }
+
+    function sendMessage() {
+        brokerName = $("[name=brokerName]").val();
+        memberName = $("[name=memberName]").val();
+        var messageInput = $('#messageInput').val();
+        stompClient.send("/app/chat/sendMessage/"+sessionId, {}, JSON.stringify({sender:sessionId, receiver:memberName,brokerName:brokerName, content: messageInput, type: 'CHAT' }));
+        stompClient.send("/app/chat/sendMessage/"+memberName, {}, JSON.stringify({sender:sessionId, receiver:memberName,brokerName:brokerName, content: messageInput, type: 'CHAT' }));
+        $('#messageInput').val('');
+    }
+
+    function showChatMessage(message) {
+        if(message.type=="JOIN" && message.sender!=sessionId){
+            $("[name=memberName]").val(message.sender);
+            $('#messages').append('<li>'  + 'Someone came in.' + '</li>');
+            return;
+        }else if(message.type=="JOIN" && message.sender==sessionId && message.receiver==null){
+            $('#messages').append('<li>'  + 'Looking for someone...' + '</li>');
+            return;
+        }else if(message.type=="JOIN" && message.sender==sessionId){
+            $("[name=memberName]").val(message.receiver);
+            $('#messages').append('<li>'  + 'You have entered someone\'s room.' + '</li>');
+            return;
+        }
+        if(message.type=="LEAVE"){ $('#messages').append('<li>'  + 'The stranger has left' + '</li>');
+            disconnect();
+            return;
+        }
+
+        var name = "Stranger";
+        if(message.sender == sessionId){name="You"}
+        $('#messages').append('<li>' + name + ': ' + message.content + '</li>');
+    }
+
+
+    $(function () {
+        updateUserNo();
+        $('#messageForm').on('submit', function (e) {
+            e.preventDefault();
+            sendMessage();
+        });
+    });
+</script>
+</body>
+</html>
